@@ -14,6 +14,8 @@ namespace yugen {
 struct RequestContext {
     EOSCallbackQueue *queue = nullptr;
     EOSApiTable *table = nullptr;
+    EOSPlatformManager *platform = nullptr;
+    void *handle = nullptr;
     godot::String operation;
     godot::Dictionary context;
 };

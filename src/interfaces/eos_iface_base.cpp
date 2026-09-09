@@ -43,6 +43,7 @@ RequestContext *EOSInterfaceBase::make_request(const godot::String &operation, c
     RequestContext *ctx = new RequestContext();
     ctx->queue = platform->get_queue().ptr();
     ctx->table = platform->api_table();
+    ctx->platform = platform;
     ctx->operation = operation;
     ctx->context = context;
     return ctx;

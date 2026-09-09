@@ -71,8 +71,57 @@ godot::Dictionary EOSPlatformManager::initialize(const godot::Dictionary &config
         record_error(out);
         return out;
     }
+    godot::String product_id = config.get("product_id", "");
+    godot::String sandbox_id = config.get("sandbox_id", "");
+    godot::String deployment_id = config.get("deployment_id", "");
+    if (product_id.is_empty() || sandbox_id.is_empty() || deployment_id.is_empty()) {
+        context["reason"] = "product_id, sandbox_id and deployment_id are required to create the platform";
+        godot::Dictionary out = EOSResult::make_result(10, "platform.create", context);
+        record_error(out);
+        api.EOS_Shutdown();
+        return out;
+    }
+    godot::String client_id = config.get("client_id", "");
+    godot::String client_secret = config.get("client_secret", "");
+    godot::String encryption_key = config.get("encryption_key", "");
+    godot::String cache_directory = config.get("cache_directory", "");
+    godot::CharString product_id_utf = product_id.utf8();
+    godot::CharString sandbox_id_utf = sandbox_id.utf8();
+    godot::CharString deployment_id_utf = deployment_id.utf8();
+    godot::CharString client_id_utf = client_id.utf8();
+    godot::CharString client_secret_utf = client_secret.utf8();
+    godot::CharString encryption_key_utf = encryption_key.utf8();
+    godot::CharString cache_directory_utf = cache_directory.utf8();
+    EOS_Platform_ClientCredentials credentials = {};
+    credentials.ClientId = client_id.is_empty() ? nullptr : client_id_utf.get_data();
+    credentials.ClientSecret = client_secret.is_empty() ? nullptr : client_secret_utf.get_data();
+    EOS_Platform_RTCOptions rtc_options = {};
+    rtc_options.ApiVersion = EOS_PLATFORM_RTCOPTIONS_API_LATEST;
+    rtc_options.BackgroundMode = EOS_ERTCBackgroundMode::EOS_RTCBM_LeaveRooms;
+    EOS_Platform_Options platform_options = {};
+    platform_options.ApiVersion = EOS_PLATFORM_OPTIONS_API_LATEST;
+    platform_options.ProductId = product_id_utf.get_data();
+    platform_options.SandboxId = sandbox_id_utf.get_data();
+    platform_options.ClientCredentials = credentials;
+    platform_options.bIsServer = EOS_FALSE;
+    platform_options.EncryptionKey = encryption_key.is_empty() ? nullptr : encryption_key_utf.get_data();
+    platform_options.DeploymentId = deployment_id_utf.get_data();
+    platform_options.Flags = 0;
+    platform_options.CacheDirectory = cache_directory.is_empty() ? nullptr : cache_directory_utf.get_data();
+    platform_options.TickBudgetInMilliseconds = 0;
+    platform_options.RTCOptions = &rtc_options;
+    EOS_HPlatform created = api.EOS_Platform_Create(&platform_options);
+    if (created == nullptr) {
+        context["reason"] = "EOS_Platform_Create returned null. Verify ids and the native library version.";
+        godot::Dictionary out = EOSResult::make_result(14, "platform.create", context);
+        record_error(out);
+        api.EOS_Shutdown();
+        return out;
+    }
+    platform_handle = created;
+    platform_created = true;
     sdk_initialized = true;
-    logger->log_message(3, "platform", "EOS_Initialize succeeded");
+    logger->log_message(3, "platform", "EOS platform created");
     return EOSResult::make_result(0, "platform.initialize", context);
 #else
     bool loaded = loader->load();
@@ -91,7 +140,11 @@ godot::Dictionary EOSPlatformManager::initialize(const godot::Dictionary &config
 
 void EOSPlatformManager::shutdown() {
     queue->clear();
+    continuance_tokens.clear();
 #if YUGEN_EOS_HAS_SDK
+    if (platform_handle != nullptr && api.EOS_Platform_Release != nullptr) {
+        api.EOS_Platform_Release((EOS_HPlatform)platform_handle);
+    }
     if (sdk_initialized && api.EOS_Shutdown != nullptr) {
         api.EOS_Shutdown();
     }
@@ -171,6 +224,25 @@ EOSApiTable *EOSPlatformManager::api_table() {
 #else
     return nullptr;
 #endif
+}
+
+int64_t EOSPlatformManager::store_continuance(void *token) {
+    if (token == nullptr) {
+        return 0;
+    }
+    int64_t ref = next_token_id++;
+    continuance_tokens[ref] = token;
+    return ref;
+}
+
+void *EOSPlatformManager::take_continuance(int64_t ref) {
+    auto it = continuance_tokens.find(ref);
+    if (it == continuance_tokens.end()) {
+        return nullptr;
+    }
+    void *token = it->second;
+    continuance_tokens.erase(it);
+    return token;
 }
 
 void EOSPlatformManager::record_error(const godot::Dictionary &error) {

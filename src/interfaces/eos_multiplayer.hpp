@@ -18,18 +18,25 @@ protected:
 
 public:
     ~EOSSessionsInterface();
-    godot::Dictionary sessions_create(const godot::String &local_user_id, const godot::String &session_name, int64_t max_players, bool is_public);
+    godot::Dictionary sessions_create(const godot::String &local_user_id, const godot::String &session_name, int64_t max_players, bool is_public, const godot::Array &attributes);
     godot::Dictionary sessions_search(const godot::Dictionary &options);
     godot::Dictionary sessions_get_search_count();
     godot::Dictionary sessions_get_search_result(int64_t index);
     godot::Dictionary sessions_join(const godot::String &local_user_id, int64_t session_ref);
     godot::Dictionary sessions_destroy(const godot::String &session_name);
+    godot::Dictionary sessions_send_invite(const godot::String &session_name, const godot::String &local_user_id, const godot::String &target_user_id);
+    godot::Dictionary sessions_query_invites(const godot::String &local_user_id);
+    godot::Dictionary sessions_reject_invite(const godot::String &local_user_id, const godot::String &invite_id);
+    godot::Dictionary sessions_set_attributes(const godot::String &session_name, const godot::Array &attributes);
+    godot::Dictionary sessions_get_attributes(int64_t session_ref);
 };
 
 class EOSLobbiesInterface : public EOSInterfaceBase {
     GDCLASS(EOSLobbiesInterface, EOSInterfaceBase);
 
     void *active_search = nullptr;
+    std::map<int64_t, void *> lobby_registry;
+    int64_t next_registry_id = 1;
 
 protected:
     static void _bind_methods();
@@ -38,6 +45,11 @@ public:
     ~EOSLobbiesInterface();
     godot::Dictionary lobbies_create(const godot::String &local_user_id, int64_t max_members, bool is_public);
     godot::Dictionary lobbies_join(const godot::String &lobby_id, const godot::String &local_user_id);
+    godot::Dictionary lobbies_join_details(int64_t lobby_ref, const godot::String &local_user_id);
+    godot::Dictionary lobbies_search(const godot::String &local_user_id, int64_t max_results);
+    godot::Dictionary lobbies_get_search_count();
+    godot::Dictionary lobbies_get_search_result(int64_t index);
+    godot::Dictionary lobbies_get_details(const godot::String &lobby_id, const godot::String &local_user_id);
     godot::Dictionary lobbies_leave(const godot::String &lobby_id, const godot::String &local_user_id);
     godot::Dictionary lobbies_send_invite(const godot::String &lobby_id, const godot::String &local_user_id, const godot::String &target_user_id);
 };

@@ -14,6 +14,7 @@ public:
     godot::Dictionary auth_login(int64_t login_type, const godot::String &id, const godot::String &token);
     godot::Dictionary auth_logout(const godot::String &local_user_id);
     godot::Dictionary auth_verify(const godot::String &local_user_id);
+    godot::Dictionary auth_link_account(int64_t continuance_ref, int64_t link_flags);
     int64_t get_logged_in_count();
 };
 

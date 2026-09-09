@@ -1,6 +1,6 @@
 {
   "sdk_version": "1.19.1.2",
-  "wrapper_version": "0.1.0",
+  "wrapper_version": "0.2.0",
   "godot_minimum": "4.3",
   "interfaces": {
     "eos_achievements": {

@@ -9,6 +9,8 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
 
+#include <map>
+
 namespace yugen {
 
 class EOSPlatformManager : public godot::RefCounted {
@@ -23,6 +25,8 @@ class EOSPlatformManager : public godot::RefCounted {
     godot::Ref<EOSCallbackQueue> queue;
     godot::Dictionary last_config;
     godot::Array recent_errors;
+    std::map<int64_t, void *> continuance_tokens;
+    int64_t next_token_id = 1;
 
 protected:
     static void _bind_methods();
@@ -42,6 +46,8 @@ public:
     godot::Ref<EOSCallbackQueue> get_queue() const;
     void *get_platform_handle() const;
     EOSApiTable *api_table();
+    int64_t store_continuance(void *token);
+    void *take_continuance(int64_t ref);
     void record_error(const godot::Dictionary &error);
     godot::Array get_recent_errors() const;
 };

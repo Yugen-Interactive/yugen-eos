@@ -122,7 +122,7 @@ func config_to_dict() -> Dictionary:
 		"client_id": config.client_id,
 		"client_secret": config.client_secret,
 		"encryption_key": config.encryption_key,
-		"cache_directory": config.cache_directory,
+		"cache_directory": ProjectSettings.globalize_path(config.cache_directory),
 		"log_level": config.log_level,
 	}
 

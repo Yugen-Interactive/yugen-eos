@@ -27,10 +27,10 @@ static void connect_login_cb(const EOS_Connect_LoginCallbackInfo *data) {
             payload["product_user_id"] = godot::String(buf);
         }
     }
-    if (data->ContinuanceToken != nullptr) {
-        payload["has_continuance_token"] = true;
-    }
     if (ctx->table->EOS_EResult_IsOperationComplete(data->ResultCode) == EOS_TRUE) {
+        if (data->ContinuanceToken != nullptr && ctx->platform != nullptr) {
+            payload["continuance_ref"] = ctx->platform->store_continuance((void *)data->ContinuanceToken);
+        }
         ctx->queue->enqueue(ctx->operation, payload);
         delete ctx;
     }
@@ -137,18 +137,38 @@ godot::Dictionary EOSConnectInterface::connect_logout(const godot::String &produ
 #endif
 }
 
-godot::Dictionary EOSConnectInterface::connect_create_user(const godot::String &continuance_token) {
+godot::Dictionary EOSConnectInterface::connect_create_user(int64_t continuance_ref) {
     godot::Dictionary ready = require_ready("connect.create_user");
     if (!bool(ready.get("ok", false))) {
         return ready;
     }
-    if (continuance_token.is_empty()) {
+#if YUGEN_EOS_HAS_SDK
+    EOS_HPlatform h = (EOS_HPlatform)platform->get_platform_handle();
+    if (h == nullptr) {
+        return not_implemented("connect.create_user", "Platform handle not created yet");
+    }
+    EOS_HConnect connect = bindings()->EOS_Platform_GetConnectInterface(h);
+    if (connect == nullptr) {
+        return not_implemented("connect.create_user", "Connect interface unavailable on this platform");
+    }
+    void *token = platform->take_continuance(continuance_ref);
+    if (token == nullptr) {
         godot::Dictionary context;
-        context["reason"] = "Continuance token from connect.login is required";
+        context["reason"] = "Unknown continuance_ref. Use the continuance_ref from a login result.";
         return EOSResult::make_result(10, "connect.create_user", context);
     }
-#if YUGEN_EOS_HAS_SDK
-    return not_implemented("connect.create_user", "Continuance token handoff requires token object plumbing from login callback");
+    godot::Dictionary context;
+    RequestContext *ctx = make_request("connect.create_user", context);
+    EOS_Connect_CreateUserOptions options = {};
+    options.ApiVersion = EOS_CONNECT_CREATEUSER_API_LATEST;
+    options.ContinuanceToken = (EOS_ContinuanceToken)token;
+    bindings()->EOS_Connect_CreateUser(connect, &options, ctx, connect_create_user_cb);
+    godot::Dictionary pending;
+    pending["ok"] = true;
+    pending["code"] = (int64_t)39;
+    pending["name"] = "EOS_RequestInProgress";
+    pending["operation"] = "connect.create_user";
+    return pending;
 #else
     return not_implemented("connect.create_user", "EOS SDK not linked. Rebuild with EOS_SDK_DIR pointing at SDK 1.19.1.");
 #endif

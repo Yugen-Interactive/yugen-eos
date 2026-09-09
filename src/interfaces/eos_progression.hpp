@@ -24,6 +24,9 @@ protected:
 public:
     godot::Dictionary achievements_unlock(const godot::String &local_user_id, const godot::String &achievement_id);
     godot::Dictionary achievements_query(const godot::String &local_user_id, const godot::Array &achievement_ids);
+    godot::Dictionary achievements_query_definitions(const godot::String &local_user_id);
+    godot::Dictionary achievements_get_definition_count();
+    godot::Dictionary achievements_get_definition(int64_t index);
 };
 
 class EOSLeaderboardsInterface : public EOSInterfaceBase {

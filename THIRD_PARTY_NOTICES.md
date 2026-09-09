@@ -1,7 +1,8 @@
 Yugen EOS wrapper license notes
 
 Wrapper license
-MIT. See LICENSE.
+Proprietary, all rights reserved by Yugen Interactive. See LICENSE.
+Redistribution without prior written permission is not allowed.
 
 EOS SDK license and restrictions
 Epic Online Services SDK is proprietary software owned by Epic Games, Inc.
@@ -20,6 +21,9 @@ What this project may distribute
 Wrapper source code, build scripts, generator, tests, examples, docs.
 
 What this project must not distribute
-EOS headers, EOS static or dynamic libraries, DevAuthTool credentials,
-ProductId, SandboxId, DeploymentId, ClientId, ClientSecret, encryption
-keys, or any credential belonging to a real product.
+This repository itself may not be redistributed without prior
+written permission from Yugen Interactive. In addition, it must
+never contain EOS headers, EOS static or dynamic libraries,
+DevAuthTool credentials, ProductId, SandboxId, DeploymentId,
+ClientId, ClientSecret, encryption keys, or any credential
+belonging to a real product.

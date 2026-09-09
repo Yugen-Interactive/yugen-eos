@@ -14,6 +14,8 @@ public:
     godot::Dictionary friends_query(const godot::String &local_user_id);
     godot::Dictionary friends_get_count(const godot::String &local_user_id);
     godot::Dictionary friends_send_invite(const godot::String &local_user_id, const godot::String &target_user_id);
+    godot::Dictionary friends_accept_invite(const godot::String &local_user_id, const godot::String &target_user_id);
+    godot::Dictionary friends_reject_invite(const godot::String &local_user_id, const godot::String &target_user_id);
 };
 
 class EOSPresenceInterface : public EOSInterfaceBase {

@@ -37,7 +37,7 @@ for h in sorted(INCLUDE.glob("eos_*.h")):
 manifest = {
     "sdk_version": "%d.%d.%d.%d" % (version["EOS_MAJOR_VERSION"], version["EOS_MINOR_VERSION"],
                                     version["EOS_PATCH_VERSION"], version["EOS_HOTFIX_VERSION"]),
-    "wrapper_version": "0.1.0",
+    "wrapper_version": "0.2.0",
     "godot_minimum": "4.3",
     "interfaces": interfaces,
 }

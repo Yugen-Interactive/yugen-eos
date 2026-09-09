@@ -12,6 +12,7 @@ void EOSAuthInterface::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("auth_login"), &EOSAuthInterface::auth_login);
     godot::ClassDB::bind_method(godot::D_METHOD("auth_logout"), &EOSAuthInterface::auth_logout);
     godot::ClassDB::bind_method(godot::D_METHOD("auth_verify"), &EOSAuthInterface::auth_verify);
+    godot::ClassDB::bind_method(godot::D_METHOD("auth_link_account"), &EOSAuthInterface::auth_link_account);
     godot::ClassDB::bind_method(godot::D_METHOD("get_logged_in_count"), &EOSAuthInterface::get_logged_in_count);
     ADD_SIGNAL(godot::MethodInfo("login_completed", godot::PropertyInfo(godot::Variant::DICTIONARY, "result")));
     ADD_SIGNAL(godot::MethodInfo("logout_completed", godot::PropertyInfo(godot::Variant::DICTIONARY, "result")));
@@ -29,9 +30,26 @@ static void auth_login_cb(const EOS_Auth_LoginCallbackInfo *data) {
         }
     }
     if (ctx->table->EOS_EResult_IsOperationComplete(data->ResultCode) == EOS_TRUE) {
+        if (data->ContinuanceToken != nullptr && ctx->platform != nullptr) {
+            payload["continuance_ref"] = ctx->platform->store_continuance((void *)data->ContinuanceToken);
+        }
         ctx->queue->enqueue(ctx->operation, payload);
         delete ctx;
     }
+}
+
+static void auth_link_cb(const EOS_Auth_LinkAccountCallbackInfo *data) {
+    RequestContext *ctx = (RequestContext *)data->ClientData;
+    godot::Dictionary payload = EOSResult::make_result((int64_t)data->ResultCode, ctx->operation, ctx->context);
+    if (data->LocalUserId != nullptr) {
+        char buf[64] = {};
+        int32_t len = (int32_t)sizeof(buf);
+        if (ctx->table->EOS_EpicAccountId_ToString(data->LocalUserId, buf, &len) == EOS_EResult::EOS_Success) {
+            payload["local_user_id"] = godot::String(buf);
+        }
+    }
+    ctx->queue->enqueue(ctx->operation, payload);
+    delete ctx;
 }
 
 static void auth_logout_cb(const EOS_Auth_LogoutCallbackInfo *data) {
@@ -134,6 +152,45 @@ godot::Dictionary EOSAuthInterface::auth_verify(const godot::String &local_user_
     return out;
 #else
     return not_implemented("auth.verify", "EOS SDK not linked. Rebuild with EOS_SDK_DIR pointing at SDK 1.19.1.");
+#endif
+}
+
+godot::Dictionary EOSAuthInterface::auth_link_account(int64_t continuance_ref, int64_t link_flags) {
+    godot::Dictionary ready = require_ready("auth.link_account");
+    if (!bool(ready.get("ok", false))) {
+        return ready;
+    }
+#if YUGEN_EOS_HAS_SDK
+    EOS_HPlatform h = (EOS_HPlatform)platform->get_platform_handle();
+    if (h == nullptr) {
+        return not_implemented("auth.link_account", "Platform handle not created yet");
+    }
+    EOS_HAuth auth = bindings()->EOS_Platform_GetAuthInterface(h);
+    if (auth == nullptr) {
+        return not_implemented("auth.link_account", "Auth interface unavailable on this platform");
+    }
+    void *token = platform->take_continuance(continuance_ref);
+    if (token == nullptr) {
+        godot::Dictionary context;
+        context["reason"] = "Unknown continuance_ref. Use the continuance_ref from a login result.";
+        return EOSResult::make_result(10, "auth.link_account", context);
+    }
+    godot::Dictionary context;
+    RequestContext *ctx = make_request("auth.link_account", context);
+    EOS_Auth_LinkAccountOptions options = {};
+    options.ApiVersion = EOS_AUTH_LINKACCOUNT_API_LATEST;
+    options.LinkAccountFlags = (EOS_ELinkAccountFlags)link_flags;
+    options.ContinuanceToken = (EOS_ContinuanceToken)token;
+    options.LocalUserId = nullptr;
+    bindings()->EOS_Auth_LinkAccount(auth, &options, ctx, auth_link_cb);
+    godot::Dictionary pending;
+    pending["ok"] = true;
+    pending["code"] = (int64_t)39;
+    pending["name"] = "EOS_RequestInProgress";
+    pending["operation"] = "auth.link_account";
+    return pending;
+#else
+    return not_implemented("auth.link_account", "EOS SDK not linked. Rebuild with EOS_SDK_DIR pointing at SDK 1.19.1.");
 #endif
 }
 

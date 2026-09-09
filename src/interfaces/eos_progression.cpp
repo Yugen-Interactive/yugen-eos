@@ -21,6 +21,9 @@ void EOSStatsInterface::_bind_methods() {
 void EOSAchievementsInterface::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("achievements_unlock"), &EOSAchievementsInterface::achievements_unlock);
     godot::ClassDB::bind_method(godot::D_METHOD("achievements_query"), &EOSAchievementsInterface::achievements_query);
+    godot::ClassDB::bind_method(godot::D_METHOD("achievements_query_definitions"), &EOSAchievementsInterface::achievements_query_definitions);
+    godot::ClassDB::bind_method(godot::D_METHOD("achievements_get_definition_count"), &EOSAchievementsInterface::achievements_get_definition_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("achievements_get_definition"), &EOSAchievementsInterface::achievements_get_definition);
     ADD_SIGNAL(godot::MethodInfo("unlocked", godot::PropertyInfo(godot::Variant::DICTIONARY, "result")));
 }
 
@@ -54,6 +57,13 @@ static void achievements_unlock_cb(const EOS_Achievements_OnUnlockAchievementsCo
 }
 
 static void achievements_query_cb(const EOS_Achievements_OnQueryPlayerAchievementsCompleteCallbackInfo *data) {
+    RequestContext *ctx = (RequestContext *)data->ClientData;
+    godot::Dictionary payload = EOSResult::make_result((int64_t)data->ResultCode, ctx->operation, ctx->context);
+    ctx->queue->enqueue(ctx->operation, payload);
+    delete ctx;
+}
+
+static void achievements_defs_cb(const EOS_Achievements_OnQueryDefinitionsCompleteCallbackInfo *data) {
     RequestContext *ctx = (RequestContext *)data->ClientData;
     godot::Dictionary payload = EOSResult::make_result((int64_t)data->ResultCode, ctx->operation, ctx->context);
     ctx->queue->enqueue(ctx->operation, payload);
@@ -269,6 +279,107 @@ godot::Dictionary EOSAchievementsInterface::achievements_query(const godot::Stri
     return pending;
 #else
     return not_implemented("achievements.query", "EOS SDK not linked. Rebuild with EOS_SDK_DIR pointing at SDK 1.19.1.");
+#endif
+}
+
+godot::Dictionary EOSAchievementsInterface::achievements_query_definitions(const godot::String &local_user_id) {
+    godot::Dictionary ready = require_ready("achievements.query_definitions");
+    if (!bool(ready.get("ok", false))) {
+        return ready;
+    }
+#if YUGEN_EOS_HAS_SDK
+    EOS_HPlatform h = (EOS_HPlatform)platform->get_platform_handle();
+    if (h == nullptr) {
+        return not_implemented("achievements.query_definitions", "Platform handle not created yet");
+    }
+    EOS_HAchievements achievements = bindings()->EOS_Platform_GetAchievementsInterface(h);
+    if (achievements == nullptr) {
+        return not_implemented("achievements.query_definitions", "Achievements interface unavailable on this platform");
+    }
+    EOS_ProductUserId user = nullptr;
+    godot::CharString local_utf;
+    if (!local_user_id.is_empty()) {
+        local_utf = local_user_id.utf8();
+        user = bindings()->EOS_ProductUserId_FromString(local_utf.get_data());
+    }
+    godot::Dictionary context;
+    RequestContext *ctx = make_request("achievements.query_definitions", context);
+    EOS_Achievements_QueryDefinitionsOptions options = {};
+    options.ApiVersion = EOS_ACHIEVEMENTS_QUERYDEFINITIONS_API_LATEST;
+    options.LocalUserId = user;
+    bindings()->EOS_Achievements_QueryDefinitions(achievements, &options, ctx, achievements_defs_cb);
+    godot::Dictionary pending;
+    pending["ok"] = true;
+    pending["code"] = (int64_t)39;
+    pending["name"] = "EOS_RequestInProgress";
+    pending["operation"] = "achievements.query_definitions";
+    return pending;
+#else
+    return not_implemented("achievements.query_definitions", "EOS SDK not linked. Rebuild with EOS_SDK_DIR pointing at SDK 1.19.1.");
+#endif
+}
+
+godot::Dictionary EOSAchievementsInterface::achievements_get_definition_count() {
+    godot::Dictionary ready = require_ready("achievements.get_definition_count");
+    if (!bool(ready.get("ok", false))) {
+        return ready;
+    }
+#if YUGEN_EOS_HAS_SDK
+    EOS_HPlatform h = (EOS_HPlatform)platform->get_platform_handle();
+    if (h == nullptr) {
+        return not_implemented("achievements.get_definition_count", "Platform handle not created yet");
+    }
+    EOS_HAchievements achievements = bindings()->EOS_Platform_GetAchievementsInterface(h);
+    if (achievements == nullptr) {
+        return not_implemented("achievements.get_definition_count", "Achievements interface unavailable on this platform");
+    }
+    EOS_Achievements_GetAchievementDefinitionCountOptions options = {};
+    options.ApiVersion = EOS_ACHIEVEMENTS_GETACHIEVEMENTDEFINITIONCOUNT_API_LATEST;
+    int32_t count = bindings()->EOS_Achievements_GetAchievementDefinitionCount(achievements, &options);
+    godot::Dictionary out = EOSResult::make_result(0, "achievements.get_definition_count", godot::Dictionary());
+    out["count"] = (int64_t)count;
+    return out;
+#else
+    return not_implemented("achievements.get_definition_count", "EOS SDK not linked. Rebuild with EOS_SDK_DIR pointing at SDK 1.19.1.");
+#endif
+}
+
+godot::Dictionary EOSAchievementsInterface::achievements_get_definition(int64_t index) {
+    godot::Dictionary ready = require_ready("achievements.get_definition");
+    if (!bool(ready.get("ok", false))) {
+        return ready;
+    }
+#if YUGEN_EOS_HAS_SDK
+    EOS_HPlatform h = (EOS_HPlatform)platform->get_platform_handle();
+    if (h == nullptr) {
+        return not_implemented("achievements.get_definition", "Platform handle not created yet");
+    }
+    EOS_HAchievements achievements = bindings()->EOS_Platform_GetAchievementsInterface(h);
+    if (achievements == nullptr) {
+        return not_implemented("achievements.get_definition", "Achievements interface unavailable on this platform");
+    }
+    EOS_Achievements_CopyAchievementDefinitionV2ByIndexOptions options = {};
+    options.ApiVersion = EOS_ACHIEVEMENTS_COPYACHIEVEMENTDEFINITIONV2BYINDEX_API_LATEST;
+    options.AchievementIndex = (uint32_t)index;
+    EOS_Achievements_DefinitionV2 *definition = nullptr;
+    EOS_EResult copy_result = bindings()->EOS_Achievements_CopyAchievementDefinitionV2ByIndex(achievements, &options, &definition);
+    if (copy_result != EOS_EResult::EOS_Success || definition == nullptr) {
+        godot::Dictionary context;
+        context["native_code"] = (int64_t)copy_result;
+        context["reason"] = "No cached definition at this index. Call achievements.query_definitions first.";
+        return EOSResult::make_result((int64_t)copy_result, "achievements.get_definition", context);
+    }
+    godot::Dictionary out = EOSResult::make_result(0, "achievements.get_definition", godot::Dictionary());
+    out["achievement_id"] = godot::String(definition->AchievementId ? definition->AchievementId : "");
+    out["unlocked_display_name"] = godot::String(definition->UnlockedDisplayName ? definition->UnlockedDisplayName : "");
+    out["unlocked_description"] = godot::String(definition->UnlockedDescription ? definition->UnlockedDescription : "");
+    out["locked_display_name"] = godot::String(definition->LockedDisplayName ? definition->LockedDisplayName : "");
+    out["locked_description"] = godot::String(definition->LockedDescription ? definition->LockedDescription : "");
+    out["flavor_text"] = godot::String(definition->FlavorText ? definition->FlavorText : "");
+    bindings()->EOS_Achievements_DefinitionV2_Release(definition);
+    return out;
+#else
+    return not_implemented("achievements.get_definition", "EOS SDK not linked. Rebuild with EOS_SDK_DIR pointing at SDK 1.19.1.");
 #endif
 }
 

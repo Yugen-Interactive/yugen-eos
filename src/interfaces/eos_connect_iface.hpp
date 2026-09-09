@@ -13,7 +13,7 @@ protected:
 public:
     godot::Dictionary connect_login(int64_t credential_type, const godot::String &token, const godot::String &display_name);
     godot::Dictionary connect_logout(const godot::String &product_user_id);
-    godot::Dictionary connect_create_user(const godot::String &continuance_token);
+    godot::Dictionary connect_create_user(int64_t continuance_ref);
     int64_t get_logged_in_count();
 };
 

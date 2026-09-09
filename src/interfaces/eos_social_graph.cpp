@@ -14,6 +14,8 @@ void EOSFriendsInterface::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("friends_query"), &EOSFriendsInterface::friends_query);
     godot::ClassDB::bind_method(godot::D_METHOD("friends_get_count"), &EOSFriendsInterface::friends_get_count);
     godot::ClassDB::bind_method(godot::D_METHOD("friends_send_invite"), &EOSFriendsInterface::friends_send_invite);
+    godot::ClassDB::bind_method(godot::D_METHOD("friends_accept_invite"), &EOSFriendsInterface::friends_accept_invite);
+    godot::ClassDB::bind_method(godot::D_METHOD("friends_reject_invite"), &EOSFriendsInterface::friends_reject_invite);
     ADD_SIGNAL(godot::MethodInfo("query_completed", godot::PropertyInfo(godot::Variant::DICTIONARY, "result")));
 }
 
@@ -39,6 +41,20 @@ static void friends_query_cb(const EOS_Friends_QueryFriendsCallbackInfo *data) {
 }
 
 static void friends_invite_cb(const EOS_Friends_SendInviteCallbackInfo *data) {
+    RequestContext *ctx = (RequestContext *)data->ClientData;
+    godot::Dictionary payload = EOSResult::make_result((int64_t)data->ResultCode, ctx->operation, ctx->context);
+    ctx->queue->enqueue(ctx->operation, payload);
+    delete ctx;
+}
+
+static void friends_accept_cb(const EOS_Friends_AcceptInviteCallbackInfo *data) {
+    RequestContext *ctx = (RequestContext *)data->ClientData;
+    godot::Dictionary payload = EOSResult::make_result((int64_t)data->ResultCode, ctx->operation, ctx->context);
+    ctx->queue->enqueue(ctx->operation, payload);
+    delete ctx;
+}
+
+static void friends_reject_cb(const EOS_Friends_RejectInviteCallbackInfo *data) {
     RequestContext *ctx = (RequestContext *)data->ClientData;
     godot::Dictionary payload = EOSResult::make_result((int64_t)data->ResultCode, ctx->operation, ctx->context);
     ctx->queue->enqueue(ctx->operation, payload);
@@ -172,6 +188,88 @@ godot::Dictionary EOSFriendsInterface::friends_send_invite(const godot::String &
     return pending;
 #else
     return not_implemented("friends.send_invite", "EOS SDK not linked. Rebuild with EOS_SDK_DIR pointing at SDK 1.19.1.");
+#endif
+}
+
+godot::Dictionary EOSFriendsInterface::friends_accept_invite(const godot::String &local_user_id, const godot::String &target_user_id) {
+    godot::Dictionary ready = require_ready("friends.accept_invite");
+    if (!bool(ready.get("ok", false))) {
+        return ready;
+    }
+#if YUGEN_EOS_HAS_SDK
+    EOS_HPlatform h = (EOS_HPlatform)platform->get_platform_handle();
+    if (h == nullptr) {
+        return not_implemented("friends.accept_invite", "Platform handle not created yet");
+    }
+    EOS_HFriends friends = bindings()->EOS_Platform_GetFriendsInterface(h);
+    if (friends == nullptr) {
+        return not_implemented("friends.accept_invite", "Friends interface unavailable on this platform");
+    }
+    EOS_EpicAccountId local = bindings()->EOS_EpicAccountId_FromString(local_user_id.utf8().get_data());
+    EOS_EpicAccountId target = bindings()->EOS_EpicAccountId_FromString(target_user_id.utf8().get_data());
+    if (bindings()->EOS_EpicAccountId_IsValid(local) == EOS_FALSE || bindings()->EOS_EpicAccountId_IsValid(target) == EOS_FALSE) {
+        godot::Dictionary context;
+        context["reason"] = "Invalid Epic Account ID string";
+        return EOSResult::make_result(10, "friends.accept_invite", context);
+    }
+    godot::Dictionary context;
+    context["local_user_id"] = local_user_id;
+    context["target_user_id"] = target_user_id;
+    RequestContext *ctx = make_request("friends.accept_invite", context);
+    EOS_Friends_AcceptInviteOptions options = {};
+    options.ApiVersion = EOS_FRIENDS_ACCEPTINVITE_API_LATEST;
+    options.LocalUserId = local;
+    options.TargetUserId = target;
+    bindings()->EOS_Friends_AcceptInvite(friends, &options, ctx, friends_accept_cb);
+    godot::Dictionary pending;
+    pending["ok"] = true;
+    pending["code"] = (int64_t)39;
+    pending["name"] = "EOS_RequestInProgress";
+    pending["operation"] = "friends.accept_invite";
+    return pending;
+#else
+    return not_implemented("friends.accept_invite", "EOS SDK not linked. Rebuild with EOS_SDK_DIR pointing at SDK 1.19.1.");
+#endif
+}
+
+godot::Dictionary EOSFriendsInterface::friends_reject_invite(const godot::String &local_user_id, const godot::String &target_user_id) {
+    godot::Dictionary ready = require_ready("friends.reject_invite");
+    if (!bool(ready.get("ok", false))) {
+        return ready;
+    }
+#if YUGEN_EOS_HAS_SDK
+    EOS_HPlatform h = (EOS_HPlatform)platform->get_platform_handle();
+    if (h == nullptr) {
+        return not_implemented("friends.reject_invite", "Platform handle not created yet");
+    }
+    EOS_HFriends friends = bindings()->EOS_Platform_GetFriendsInterface(h);
+    if (friends == nullptr) {
+        return not_implemented("friends.reject_invite", "Friends interface unavailable on this platform");
+    }
+    EOS_EpicAccountId local = bindings()->EOS_EpicAccountId_FromString(local_user_id.utf8().get_data());
+    EOS_EpicAccountId target = bindings()->EOS_EpicAccountId_FromString(target_user_id.utf8().get_data());
+    if (bindings()->EOS_EpicAccountId_IsValid(local) == EOS_FALSE || bindings()->EOS_EpicAccountId_IsValid(target) == EOS_FALSE) {
+        godot::Dictionary context;
+        context["reason"] = "Invalid Epic Account ID string";
+        return EOSResult::make_result(10, "friends.reject_invite", context);
+    }
+    godot::Dictionary context;
+    context["local_user_id"] = local_user_id;
+    context["target_user_id"] = target_user_id;
+    RequestContext *ctx = make_request("friends.reject_invite", context);
+    EOS_Friends_RejectInviteOptions options = {};
+    options.ApiVersion = EOS_FRIENDS_REJECTINVITE_API_LATEST;
+    options.LocalUserId = local;
+    options.TargetUserId = target;
+    bindings()->EOS_Friends_RejectInvite(friends, &options, ctx, friends_reject_cb);
+    godot::Dictionary pending;
+    pending["ok"] = true;
+    pending["code"] = (int64_t)39;
+    pending["name"] = "EOS_RequestInProgress";
+    pending["operation"] = "friends.reject_invite";
+    return pending;
+#else
+    return not_implemented("friends.reject_invite", "EOS SDK not linked. Rebuild with EOS_SDK_DIR pointing at SDK 1.19.1.");
 #endif
 }
 

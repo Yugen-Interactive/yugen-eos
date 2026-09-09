@@ -20,7 +20,7 @@ has_sdk = os.path.isfile(os.path.join(sdk_include, "eos_sdk.h"))
 if not has_sdk:
     has_sdk = os.path.isfile(os.path.join(alt_include, "eos_sdk.h"))
 
-defines = ["YUGEN_EOS_VERSION=\"0.1.0\"", "YUGEN_EOS_SDK_VERSION=\"1.19.1\""]
+defines = ["YUGEN_EOS_VERSION=\"0.2.0\"", "YUGEN_EOS_SDK_VERSION=\"1.19.1\""]
 if has_sdk:
     defines.append("YUGEN_EOS_HAS_SDK=1")
     if os.path.isdir(sdk_include):

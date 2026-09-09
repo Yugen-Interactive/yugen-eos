@@ -1,6 +1,3 @@
-; Engine configuration file.
-; Yugen EOS wrapper demo project.
-
 config_version=5
 
 [application]
