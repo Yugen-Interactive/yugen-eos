@@ -1,0 +1,13 @@
+[gdextension]
+
+entry_symbol="yugen_eos_library_init"
+compatibility_minimum="4.3"
+
+[libraries]
+
+windows.x86_64="res://bin/yugen_eos.windows.x86_64.dll"
+linux.x86_64="res://bin/yugen_eos.linux.x86_64.so"
+macos.universal="res://bin/yugen_eos.macos.universal.dylib"
+android.arm64="res://bin/yugen_eos.android.arm64.so"
+android.arm32="res://bin/yugen_eos.android.arm32.so"
+ios.arm64="res://bin/yugen_eos.ios.arm64.dylib"
