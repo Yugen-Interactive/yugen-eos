@@ -29,6 +29,10 @@ jobs:
           fi
       - name: Build arm64 release
         run: scons platform=ios arch=arm64 target=template_release
+      - name: Verify artifacts
+        run: |
+          test -f bin/yugen_eos.ios.arm64.dylib
+          ls bin/
       - uses: actions/upload-artifact@v4
         with:
           name: yugen-eos-ios

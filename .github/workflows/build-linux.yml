@@ -33,6 +33,10 @@ jobs:
         run: scons platform=linux arch=x86_64
       - name: Build release
         run: scons platform=linux arch=x86_64 target=template_release
+      - name: Verify artifacts
+        run: |
+          test -f bin/yugen_eos.linux.x86_64.so
+          ls bin/
       - name: Run Python tests
         run: |
           python3 tests/test_gdscript_facades.py

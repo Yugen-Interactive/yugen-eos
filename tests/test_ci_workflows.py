@@ -30,3 +30,18 @@ if failures:
         print("  ", item)
     sys.exit(1)
 print("PASS: %d workflow files structurally valid." % len(list(WF.glob("*.yml"))))
+
+sconstruct = (REPO / "SConstruct").read_text(errors="replace")
+for required in ['env["platform"]', 'env["arch"]', 'SHLIBPREFIX=""']:
+    if required not in sconstruct:
+        print("FAIL: SConstruct must derive the library name from %s." % required)
+        sys.exit(1)
+
+gdext = (REPO / "addons" / "yugen_eos" / "yugen_eos.gdextension").read_text(errors="replace")
+for expected in ["yugen_eos.windows.x86_64.dll", "yugen_eos.linux.x86_64.so",
+                 "yugen_eos.macos.universal.dylib", "yugen_eos.android.arm64.so",
+                 "yugen_eos.android.arm32.so", "yugen_eos.ios.arm64.dylib"]:
+    if expected not in gdext:
+        print("FAIL: gdextension missing mapping for %s." % expected)
+        sys.exit(1)
+print("PASS: library naming matches the gdextension map.")

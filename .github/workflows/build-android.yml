@@ -41,6 +41,11 @@ jobs:
         run: scons platform=android arch=arm64 target=template_release
       - name: Build arm32 release
         run: scons platform=android arch=arm32 target=template_release
+      - name: Verify artifacts
+        run: |
+          test -f bin/yugen_eos.android.arm64.so
+          test -f bin/yugen_eos.android.arm32.so
+          ls bin/
       - uses: actions/upload-artifact@v4
         with:
           name: yugen-eos-android

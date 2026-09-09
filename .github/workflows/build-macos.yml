@@ -31,6 +31,10 @@ jobs:
         run: scons platform=macos arch=universal
       - name: Build release
         run: scons platform=macos arch=universal target=template_release
+      - name: Verify artifacts
+        run: |
+          test -f bin/yugen_eos.macos.universal.dylib
+          ls bin/
       - name: Run Python tests
         run: |
           python3 tests/test_gdscript_facades.py

@@ -3,8 +3,6 @@ import sys
 
 EOS_SDK_DIR = os.environ.get("EOS_SDK_DIR", "third_party/eos_sdk")
 GODOT_CPP_DIR = os.environ.get("GODOT_CPP_DIR", "godot-cpp")
-TARGET_PLATFORM = os.environ.get("YUGEN_EOS_PLATFORM", "windows")
-TARGET_ARCH = os.environ.get("YUGEN_EOS_ARCH", "x86_64")
 
 godot_cpp_sconstruct = os.path.join(GODOT_CPP_DIR, "SConstruct")
 if not os.path.isfile(godot_cpp_sconstruct):
@@ -36,6 +34,6 @@ env.Append(CPPDEFINES=defines)
 env.Append(CPPPATH=["src"])
 
 sources = Glob("src/*.cpp") + Glob("src/core/*.cpp") + Glob("src/interfaces/*.cpp")
-library_name = "yugen_eos.%s.%s" % (TARGET_PLATFORM, TARGET_ARCH)
-library = env.SharedLibrary("bin/%s%s" % (library_name, env["SHLIBSUFFIX"]), source=sources)
+library_name = "yugen_eos.%s.%s" % (env["platform"], env["arch"])
+library = env.SharedLibrary("bin/%s%s" % (library_name, env["SHLIBSUFFIX"]), source=sources, SHLIBPREFIX="")
 Default(library)
