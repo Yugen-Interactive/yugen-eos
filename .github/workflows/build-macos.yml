@@ -1,0 +1,43 @@
+name: build-macos
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install SCons
+        run: pip install scons
+      - name: Clone godot-cpp
+        run: git clone --branch godot-4.3-stable --depth 1 https://github.com/godotengine/godot-cpp.git godot-cpp
+      - name: Resolve EOS SDK
+        env:
+          EOS_SDK_URL: ${{ secrets.EOS_SDK_URL }}
+          EOS_SDK_TOKEN: ${{ secrets.EOS_SDK_TOKEN }}
+        run: |
+          if [ -n "$EOS_SDK_URL" ]; then
+            mkdir -p third_party/eos_sdk
+            curl -sSL -H "Authorization: Bearer $EOS_SDK_TOKEN" -o sdk.zip "$EOS_SDK_URL"
+            unzip -q sdk.zip -d third_party/eos_sdk
+          else
+            echo "No EOS SDK provided, stub build."
+          fi
+      - name: Build debug
+        run: scons platform=macos arch=universal
+      - name: Build release
+        run: scons platform=macos arch=universal target=template_release
+      - name: Run Python tests
+        run: |
+          python3 tests/test_gdscript_facades.py
+          python3 tests/test_docs_status.py
+          python3 tests/test_eos_symbols.py
+          python3 tests/test_bindings_fresh.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yugen-eos-macos
+          path: bin/

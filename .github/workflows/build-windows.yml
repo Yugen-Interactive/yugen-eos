@@ -1,0 +1,43 @@
+name: build-windows
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install SCons
+        run: pip install scons
+      - name: Clone godot-cpp
+        run: git clone --branch godot-4.3-stable --depth 1 https://github.com/godotengine/godot-cpp.git godot-cpp
+      - name: Resolve EOS SDK
+        env:
+          EOS_SDK_URL: ${{ secrets.EOS_SDK_URL }}
+          EOS_SDK_TOKEN: ${{ secrets.EOS_SDK_TOKEN }}
+        shell: pwsh
+        run: |
+          if ($env:EOS_SDK_URL) {
+            New-Item -ItemType Directory -Path third_party/eos_sdk -Force | Out-Null
+            $headers = @{ Authorization = "Bearer $($env:EOS_SDK_TOKEN)" }
+            Invoke-WebRequest -Uri $env:EOS_SDK_URL -Headers $headers -OutFile sdk.zip
+            Expand-Archive sdk.zip -DestinationPath third_party/eos_sdk
+          } else { Write-Host "No EOS SDK provided, stub build." }
+      - name: Build debug
+        run: scons platform=windows arch=x86_64
+      - name: Build release
+        run: scons platform=windows arch=x86_64 target=template_release
+      - name: Run Python tests
+        run: |
+          python tests/test_gdscript_facades.py
+          python tests/test_docs_status.py
+          python tests/test_eos_symbols.py
+          python tests/test_bindings_fresh.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yugen-eos-windows
+          path: bin/

@@ -13,7 +13,7 @@ build/
 *.dll
 *.gdextension.local
 EOS-SDK-*.zip
-third_party/eos_sdk/
+third_party/eos_sdk/*
 !third_party/eos_sdk/README.md
 __pycache__/
 .vs/

@@ -1,0 +1,30 @@
+name: tests
+on:
+  push:
+  pull_request:
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Resolve EOS SDK (optional)
+        env:
+          EOS_SDK_URL: ${{ secrets.EOS_SDK_URL }}
+          EOS_SDK_TOKEN: ${{ secrets.EOS_SDK_TOKEN }}
+        run: |
+          if [ -n "$EOS_SDK_URL" ]; then
+            mkdir -p third_party/eos_sdk
+            curl -sSL -H "Authorization: Bearer $EOS_SDK_TOKEN" -o sdk.zip "$EOS_SDK_URL"
+            unzip -q sdk.zip -d third_party/eos_sdk
+          else
+            echo "No EOS SDK provided, header-dependent tests will skip."
+          fi
+      - name: Run Python tests
+        run: |
+          python3 tests/test_gdscript_facades.py
+          python3 tests/test_docs_status.py
+          python3 tests/test_eos_symbols.py
+          python3 tests/test_bindings_fresh.py
