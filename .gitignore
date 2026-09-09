@@ -1,4 +1,14 @@
 .godot/
+.import/
+.nomedia
+.export/
+export.cfg
+export_credentials.cfg
+*.tmp
+*.translation
+.mono/
+data_*/
+mono_crash.*.json
 .sconsign.dblite
 godot-cpp/
 bin/
