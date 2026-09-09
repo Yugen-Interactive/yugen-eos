@@ -11,7 +11,8 @@ macOS. Builds in CI on macos runners, universal arch. Runtime needs
 libEOSSDK-Mac-Shipping.dylib. Notarization is the developer's job.
 
 Android. Builds in CI with the Android SDK package, arm64 and
-arm32. Runtime uses libEOSSDK.so from the aar. Needs Studio
+arm32. CI installs NDK 23.2.8568313, the version pinned by
+godot-cpp 4.3. Runtime uses libEOSSDK.so from the aar. Needs Studio
 credentials, manifest entries, and the DevAuthTool flow documented
 in the SDK samples.
 
