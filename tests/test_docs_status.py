@@ -1,17 +1,31 @@
+import os
 import pathlib
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
-STATUS = REPO / "docs" / "status.md"
 VALID = {"implemented", "partial", "not-supported", "requires-external",
          "requires-backend", "unavailable-on-platform"}
 
 
+def find_status():
+    env = os.environ.get("WIKI_DIR", "")
+    candidates = []
+    if env:
+        candidates.append(pathlib.Path(env) / "Status.md")
+    candidates.append(REPO.parent / "yugen-eos.wiki" / "Status.md")
+    candidates.append(REPO / "docs" / "status.md")
+    for cand in candidates:
+        if cand.is_file():
+            return cand
+    return None
+
+
 def main():
-    if not STATUS.is_file():
-        print("FAIL: docs/status.md missing.")
-        return 1
-    text = STATUS.read_text(errors="replace")
+    status = find_status()
+    if status is None:
+        print("SKIP: wiki checkout not found, Status check needs it.")
+        return 0
+    text = status.read_text(errors="replace")
     failures = []
     for line in text.splitlines():
         line = line.strip()
@@ -24,7 +38,7 @@ def main():
         for f in failures:
             print("  ", f)
         return 1
-    print("PASS: docs/status.md uses only documented states.")
+    print("PASS: Status uses only documented states (%s)." % status)
     return 0
 
 

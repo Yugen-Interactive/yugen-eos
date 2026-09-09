@@ -22,9 +22,11 @@ jobs:
           else
             echo "No EOS SDK provided, header-dependent tests will skip."
           fi
+      - name: Checkout wiki
+        run: git clone https://github.com/${{ github.repository }}.wiki.git yugen-eos.wiki || echo "Wiki unavailable, docs test will skip."
       - name: Run Python tests
         run: |
           python3 tests/test_gdscript_facades.py
-          python3 tests/test_docs_status.py
+          WIKI_DIR="$PWD/yugen-eos.wiki" python3 tests/test_docs_status.py
           python3 tests/test_eos_symbols.py
           python3 tests/test_bindings_fresh.py
